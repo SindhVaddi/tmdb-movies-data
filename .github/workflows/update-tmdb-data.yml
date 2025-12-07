@@ -1,0 +1,45 @@
+name: Update TMDb movie dataset
+
+on:
+  schedule:
+    - cron: "0 4 * * *"       # Runs daily at 04:00 UTC
+  workflow_dispatch:           # Allows manual run
+
+permissions:
+  contents: write
+
+jobs:
+  update-data:
+    runs-on: ubuntu-latest
+
+    env:
+      KAGGLE_USERNAME: ${{ secrets.KAGGLE_USERNAME }}
+      KAGGLE_API_TOKEN: ${{ secrets.KAGGLE_API_TOKEN }}
+
+    steps:
+      - name: Checkout repo
+        uses: actions/checkout@v4
+
+      - name: Set up Python
+        uses: actions/setup-python@v5
+        with:
+          python-version: "3.11"
+
+      - name: Install kaggle
+        run: pip install kaggle
+
+      - name: Download TMDB Dataset
+        run: |
+          mkdir -p data
+          kaggle datasets download -d rounakbanik/the-movies-dataset -p data --force
+          cd data
+          unzip -o the-movies-dataset.zip
+          rm the-movies-dataset.zip
+
+      - name: Commit and push updated data
+        run: |
+          git config user.name "github-actions[bot]"
+          git config user.email "github-actions[bot]@users.noreply.github.com"
+          git add data/*
+          git commit -m "Update TMDb dataset from Kaggle" || echo "No changes to commit"
+          git push
